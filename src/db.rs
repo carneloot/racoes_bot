@@ -2,11 +2,9 @@ use std::fmt::{Display, Formatter};
 use std::fs::OpenOptions;
 use std::path::PathBuf;
 
-use sea_orm::{
-    Database as SeaOrmDatabase,
-    DatabaseConnection,
-    DbErr,
-};
+use sea_orm::{Database as SeaOrmDatabase, DatabaseConnection, DbErr, EntityTrait, sea_query, Set};
+
+use crate::entity::user;
 use crate::migration::{Migrator, MigratorTrait};
 
 #[derive(Debug)]
@@ -60,5 +58,39 @@ impl Database {
 
     pub async fn apply_migrations(&self) -> Result<(), Error> {
         Ok(Migrator::up(&self.pool, None).await?)
+    }
+
+    pub async fn upsert_user(
+        &self,
+        telegram_id: u64,
+        first_name: String,
+        last_name: Option<String>,
+        username: Option<String>,
+        timezone: Option<String>,
+    ) -> Result<(), Error> {
+        let new_user = user::ActiveModel {
+            telegram_id: Set(telegram_id),
+            username: Set(username),
+            first_name: Set(first_name),
+            last_name: Set(last_name),
+            timezone: Set(timezone),
+            ..Default::default()
+        };
+
+        user::Entity::insert(new_user)
+            .on_conflict(
+                sea_query::OnConflict::column(user::Column::TelegramId)
+                    .update_columns([
+                        user::Column::Username,
+                        user::Column::FirstName,
+                        user::Column::LastName,
+                        user::Column::Timezone,
+                    ])
+                    .to_owned()
+            )
+            .exec_without_returning(&self.pool)
+            .await?;
+
+        Ok(())
     }
 }

@@ -16,3 +16,4 @@ dotenvy = { version = "0.15.7" }
 sea-orm = { version = "0.12.12", features = [] }
 sea-orm-migration = { version = "0.12.12", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
 lazy_static = "1.4.0"
+tzf-rs = "0.4.5"

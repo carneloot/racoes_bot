@@ -1,11 +1,13 @@
 use std::path::PathBuf;
 
 use async_once::AsyncOnce;
-use teloxide::utils::command::BotCommands;
 use teloxide::prelude::*;
+use teloxide::utils::command::BotCommands;
 
 use crate::db::Database;
+use crate::err::Error;
 use crate::tg::TgResponse;
+use crate::tz::get_timezone_from_location;
 
 lazy_static! {
     /// Singleton database with pool connection
@@ -48,6 +50,10 @@ pub async fn run() {
             dptree::entry()
                 .filter_command::<Command>()
                 .endpoint(command_handler),
+        )
+        .branch(
+            dptree::entry()
+                .endpoint(message_handler),
         );
 
     Dispatcher::builder(bot, handler)
@@ -63,7 +69,11 @@ pub async fn run() {
         .await;
 }
 
-async fn command_handler(bot: Bot, cmd: Command, msg: Message) -> Result<(), teloxide::RequestError> {
+async fn command_handler(
+    bot: Bot,
+    cmd: Command,
+    msg: Message,
+) -> Result<(), Error> {
     match cmd {
         Command::Help => bot
             .send_message(msg.chat.id, Command::descriptions().to_string())
@@ -73,4 +83,39 @@ async fn command_handler(bot: Bot, cmd: Command, msg: Message) -> Result<(), tel
             .await?,
     };
     Ok(())
+}
+
+async fn message_handler(
+    bot: Bot,
+    msg: Message,
+) -> Result<(), Error> {
+    if !msg.chat.is_private() {
+        Ok(())
+    } else if let Some(location) = msg.location() {
+        let timezone = get_timezone_from_location(location.latitude, location.longitude);
+        let from = msg.from().unwrap();
+        let res = match DATABASE
+            .get()
+            .await
+            .upsert_user(
+                from.id.0,
+                from.clone().first_name,
+                from.clone().last_name,
+                from.clone().username,
+                Some(timezone.to_string()),
+            )
+            .await {
+            Ok(()) => TgResponse::ChosenTimezone(timezone.to_owned()),
+            Err(err) => {
+                log::error!("{}", err);
+                TgResponse::FailedSetTimezone(timezone.to_owned())
+            }
+        };
+
+        bot.send_message(msg.chat.id, res).await?;
+        Ok(())
+    } else {
+        bot.send_message(msg.chat.id, TgResponse::IncorrectRequest).await?;
+        Ok(())
+    }
 }
