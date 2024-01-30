@@ -1,0 +1,18 @@
+[package]
+name = "racoes_bot"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async_once = "0.2.6"
+teloxide = { version = "0.12", features = ["macros"] }
+log = "0.4"
+pretty_env_logger = "0.5"
+tokio = { version = "1.8", features = ["rt-multi-thread", "macros"] }
+uom = { version = "0.35", features = [] }
+dotenvy = { version = "0.15.7" }
+sea-orm = { version = "0.12.12", features = [] }
+sea-orm-migration = { version = "0.12.12", features = ["runtime-tokio-rustls", "sqlx-sqlite"] }
+lazy_static = "1.4.0"
