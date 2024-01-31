@@ -1,6 +1,4 @@
 use std::fmt::{Display, Formatter};
-use std::fs::OpenOptions;
-use std::path::PathBuf;
 
 use sea_orm::{Database as SeaOrmDatabase, DatabaseConnection, DbErr, EntityTrait, sea_query, Set};
 
@@ -34,15 +32,8 @@ impl From<std::io::Error> for Error {
     }
 }
 
-async fn get_db_pool(path: &PathBuf) -> Result<DatabaseConnection, Error> {
-    OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .open(path)?;
-
-    let db_str = format!("sqlite:{}", path.display());
-    let pool = SeaOrmDatabase::connect(&db_str).await?;
+async fn get_db_pool(url: &String) -> Result<DatabaseConnection, Error> {
+    let pool = SeaOrmDatabase::connect(url).await?;
     Ok(pool)
 }
 
@@ -52,8 +43,8 @@ pub struct Database {
 }
 
 impl Database {
-    pub async fn new(db_path: &PathBuf) -> Result<Self, Error> {
-        get_db_pool(db_path).await.map(|pool| Self { pool })
+    pub async fn new(url: &String) -> Result<Self, Error> {
+        get_db_pool(url).await.map(|pool| Self { pool })
     }
 
     pub async fn apply_migrations(&self) -> Result<(), Error> {

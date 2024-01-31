@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use async_once::AsyncOnce;
 use teloxide::prelude::*;
 use teloxide::utils::command::BotCommands;
@@ -13,10 +11,9 @@ lazy_static! {
     /// Singleton database with pool connection
     static ref DATABASE: AsyncOnce<Database> = AsyncOnce::new(async {
         let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-        let path = PathBuf::from(database_url.to_string());
-        Database::new(&path)
+        Database::new(&database_url)
             .await
-            .unwrap_or_else(|err| panic!("Failed to connect to database {:?}: {}", path, err))
+            .unwrap_or_else(|err| panic!("Failed to connect to database {:?}: {}", database_url, err))
     });
 }
 
