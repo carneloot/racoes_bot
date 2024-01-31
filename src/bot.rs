@@ -24,6 +24,9 @@ enum Command {
     Help,
     #[command(description = "off")]
     Start,
+
+    #[command(description = "pongs back")]
+    Ping,
 }
 
 pub async fn run() {
@@ -78,6 +81,10 @@ async fn command_handler(
         Command::Start => bot
             .send_message(msg.chat.id, TgResponse::Hello)
             .await?,
+        Command::Ping => bot
+            .send_message(msg.chat.id, "pong")
+            .reply_to_message_id(msg.id)
+            .await?
     };
     Ok(())
 }
